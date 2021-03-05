@@ -2,6 +2,7 @@ import { MikroORM } from "@mikro-orm/core";
 import { __prod__ } from "./constant";
 import { Post } from "./entities/Post";
 import path from 'path'
+import { User } from "./entities/User";
 
 export default {
     migrations: {
@@ -10,7 +11,7 @@ export default {
     },
     host: "127.0.0.1",
     port: 5432,
-    entities: [Post],
+    entities: [Post, User],
     dbName: 'reddit-clone',
     type: 'postgresql',
     debug: !__prod__,
