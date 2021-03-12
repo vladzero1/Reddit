@@ -3,6 +3,7 @@ import { MyContext } from "src/types";
 import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver } from "type-graphql";
 import argon2 from "argon2";
 import { COOKIE_NAME } from "../constant";
+import { SendEmail } from "../utils/sendEmail";
 
 @InputType()
 class UsernamePasswordInput {
@@ -33,6 +34,18 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Arg('username') username: string,
+    @Ctx() { em }: MyContext
+  ) {
+    const user = await em.findOne(User, { username: username });
+    if (!user) {
+      return false;
+    }
+    SendEmail(user.email, "hello world");
+    return true;
+  }
 
   @Query(() => User, { nullable: true })
   async me(
@@ -46,17 +59,27 @@ export class UserResolver {
     return user;
   }
 
-
   @Mutation(() => UserResponse)
   async register(
     @Arg('options') options: UsernamePasswordInput,
+    @Arg('email') email: String,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
+
     if (options.username.length <= 2) {
       return {
         errors: [{
           field: "username",
           message: "length must be greater than 2!"
+        }]
+      }
+    }
+
+    if (!email.includes('@')) {
+      return {
+        errors: [{
+          field: "email",
+          message: "email must have '@'"
         }]
       }
     }
@@ -73,12 +96,22 @@ export class UserResolver {
     const hash = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
-      password: hash
+      password: hash,
+      email: email
     });
     try {
       await em.persistAndFlush(user);
     } catch (err) {
-      if (err.code === '23505') {
+
+      if (new RegExp('Key \\(email\\).+').test(err.detail)) {
+        return {
+          errors: [{
+            field: "email",
+            message: "email is already exist!"
+          }]
+        }
+      }
+      else if (new RegExp('Key \\(username\\).+').test(err.detail)){
         return {
           errors: [{
             field: "username",
@@ -86,6 +119,7 @@ export class UserResolver {
           }]
         }
       }
+      
     }
     //auto-login
     req.session.userId = user.id;
@@ -97,12 +131,12 @@ export class UserResolver {
     @Arg('options') options: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    const user = await em.findOne(User, { username: options.username })
+    const user = await em.findOne(User, options.username.includes('@') ? { email: options.username } : { username: options.username })
     if (!user) {
       return {
         errors: [{
           field: 'username',
-          message: 'username is not exist!'
+          message: 'username or email is not exist!'
         }]
       }
     }
@@ -121,6 +155,8 @@ export class UserResolver {
     return {
       user: user
     }
+
+
   }
 
   @Mutation(() => Boolean)
@@ -130,7 +166,6 @@ export class UserResolver {
     return new Promise(resolve => req.session.destroy(err => {
       if (err) {
         resolve(false);
-        console.log(err)
         return
       }
       res.clearCookie(COOKIE_NAME)
