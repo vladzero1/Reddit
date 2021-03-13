@@ -2,8 +2,10 @@ import { User } from "../entities/User";
 import { MyContext } from "src/types";
 import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver } from "type-graphql";
 import argon2 from "argon2";
-import { COOKIE_NAME } from "../constant";
+import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from "../constant";
 import { SendEmail } from "../utils/sendEmail";
+import { v4 } from 'uuid';
+import { validatePasswordLength, validateUsernameLength } from "../utils/validation";
 
 @InputType()
 class UsernamePasswordInput {
@@ -34,16 +36,63 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => UserResponse)
+  async changePassword(
+    @Arg('token') token: string,
+    @Arg('newPassword') newPassword: string,
+    @Ctx() { em, redis, req }: MyContext
+  ): Promise<UserResponse> {
+    let errors = validatePasswordLength(newPassword, "newPassword")
+    if (errors) {
+      return { errors };
+    }
+    const key = FORGOT_PASSWORD_PREFIX + token;
+    const userId = await redis.get(key);
+    if (!userId) {
+      return {
+        errors: [{
+          field: 'token',
+          message: 'token expired'
+        }]
+      }
+    }
+    const user = await em.findOne(User, { id: parseInt(userId) });
+    if (!user) {
+      return {
+        errors: [{
+          field: 'token',
+          message: 'user not exist'
+        }]
+      }
+    }
+    user.password = await argon2.hash(newPassword);
+    await em.persistAndFlush(user);
+    redis.del(key);
+    req.session.userId = user.id;
+    return { user };
+  }
+
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg('username') username: string,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, redis }: MyContext
   ) {
     const user = await em.findOne(User, { username: username });
     if (!user) {
-      return false;
+      return true;
     }
-    SendEmail(user.email, "hello world");
+    const token = v4();
+    redis.set(
+      FORGOT_PASSWORD_PREFIX + token,
+      user.id,
+      'ex',
+      1000 * 60 * 60 * 30 * 3
+    ); //3 days and it will expire
+
+    SendEmail(
+      user.email,
+      `<a href="http:localhost:3000/change-password/${token}">reset password</a>`
+    );
     return true;
   }
 
@@ -66,13 +115,9 @@ export class UserResolver {
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
 
-    if (options.username.length <= 2) {
-      return {
-        errors: [{
-          field: "username",
-          message: "length must be greater than 2!"
-        }]
-      }
+    let errors = validateUsernameLength(options.password);
+    if (errors) {
+      return { errors };
     }
 
     if (!email.includes('@')) {
@@ -84,13 +129,9 @@ export class UserResolver {
       }
     }
 
-    if (options.password.length <= 3) {
-      return {
-        errors: [{
-          field: "password",
-          message: "length must be greater than 3!"
-        }]
-      }
+    errors = validatePasswordLength(options.password, "password")
+    if (errors) {
+      return { errors };
     }
 
     const hash = await argon2.hash(options.password);
@@ -111,7 +152,7 @@ export class UserResolver {
           }]
         }
       }
-      else if (new RegExp('Key \\(username\\).+').test(err.detail)){
+      else if (new RegExp('Key \\(username\\).+').test(err.detail)) {
         return {
           errors: [{
             field: "username",
@@ -119,7 +160,7 @@ export class UserResolver {
           }]
         }
       }
-      
+
     }
     //auto-login
     req.session.userId = user.id;
@@ -140,7 +181,6 @@ export class UserResolver {
         }]
       }
     }
-
     const valid = await argon2.verify(user.password, options.password);
     if (!valid) {
       return {
