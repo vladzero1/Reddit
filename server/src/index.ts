@@ -5,7 +5,7 @@ import { ApolloServer } from 'apollo-server-express'
 import { buildSchema } from 'type-graphql';
 import { HelloResolver } from './resolvers/hello'
 import { PostResolver } from './resolvers/post';
-import { UserResolver } from "./resolvers/User";
+import { UserResolver } from "./resolvers/user";
 import Redis from 'ioredis';
 import session from 'express-session';
 import connectRedis from 'connect-redis';

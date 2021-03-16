@@ -18,7 +18,6 @@ import {
   validatePasswordLength,
   validateUsernameLength,
 } from "../utils/validation";
-import { getConnection } from "typeorm";
 
 @InputType()
 class UsernamePasswordInput {
@@ -55,10 +54,6 @@ export class UserResolver {
     @Arg("newPassword") newPassword: string,
     @Ctx() { redis, req }: MyContext
   ): Promise<UserResponse> {
-    let errors = validatePasswordLength(newPassword, "newPassword");
-    if (errors) {
-      return { errors };
-    }
     const key = FORGOT_PASSWORD_PREFIX + token;
     const userId = await redis.get(key);
     if (!userId) {

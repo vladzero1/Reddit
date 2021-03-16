@@ -5,11 +5,7 @@ import React from 'react'
 import { useLogoutMutation, useMeQuery } from '../generated/graphql';
 import { isServer } from '../utils/isServer';
 
-interface NavbarProps {
-
-}
-
-export const Navbar: React.FC<NavbarProps> = ({ }) => {
+export const NavBar: React.FC<{}> = ({ }) => {
   const router = useRouter();
   const [{ data, fetching }] = useMeQuery({
     pause: isServer(),
