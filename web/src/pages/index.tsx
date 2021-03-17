@@ -4,15 +4,19 @@ import { Layout } from "../components/Layout";
 import { usePostQuery } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
 import { Stack, Box, Heading, Text, Flex, Button } from "@chakra-ui/react";
+import { useState } from "react";
 
 const Index = () => {
+  const [variables, setVariables] = useState({
+    limit: 10,
+    cursor: undefined as undefined | string,
+  });
+
   const [{ data, fetching }] = usePostQuery({
-    variables: {
-      limit: 10,
-    },
+    variables,
   });
   if (!data && !fetching) {
-    <div>query failed. please refresh</div>;
+    return <div>data is null</div>;
   }
   return (
     <>
@@ -28,33 +32,42 @@ const Index = () => {
           {fetching && !data ? (
             <div>...loading</div>
           ) : (
-            data!.posts.map((post) => (
+            data!.posts.posts.map((post) => (
               <Box
                 p={5}
                 shadow="md"
                 borderWidth="1px"
                 flex="1"
                 borderRadius="md"
+                key={post.id}
               >
-                <Heading fontSize="xl" key={post.id}>
-                  {post.title}
-                </Heading>
+                <Heading fontSize="xl">{post.title}</Heading>
                 <Text mt={4}>{post.contentSnippets}</Text>
               </Box>
             ))
           )}
         </Stack>
-        <Flex>
-          <Button
-            m="auto"
-            colorScheme="teal"
-            shadow="md"
-            borderWidth="1px"
-            mt={8}
-          >
-            Load More
-          </Button>
-        </Flex>
+        {data?.posts.hasMore ? (
+          <Flex>
+            <Button
+              m="auto"
+              colorScheme="teal"
+              shadow="md"
+              borderWidth="1px"
+              mt={8}
+              isLoading={fetching}
+              onClick={() => {
+                setVariables({
+                  limit: variables.limit,
+                  cursor:
+                    data?.posts.posts[data.posts.posts.length - 1].createdAt,
+                });
+              }}
+            >
+              Load More
+            </Button>
+          </Flex>
+        ) : null}
       </Layout>
     </>
   );
