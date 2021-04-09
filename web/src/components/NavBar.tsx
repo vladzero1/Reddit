@@ -1,5 +1,5 @@
 import { Box, Link } from '@chakra-ui/layout';
-import { Button, Flex } from '@chakra-ui/react';
+import { Button, Flex, Heading } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import React from 'react'
 import { useLogoutMutation, useMeQuery } from '../generated/graphql';
@@ -20,23 +20,29 @@ export const NavBar: React.FC<{}> = ({ }) => {
   if (!data?.me) {
     body = (
       <>
-        <Link href="/login" mr={2}>Login</Link>|
-        <Link href="/register" ml={2}>Register</Link>
+        <Link href="/login" mr={2}>
+          Login
+        </Link>
+        |
+        <Link href="/register" ml={2}>
+          Register
+        </Link>
       </>
-    )
+    );
   } else {
     body = (
       <>
-        <Flex>
+        <Flex align="center">
+          <Button as={Link} href="/create-post" mr={2}>
+            Create Post
+          </Button>
           <Box mr={2}>{data.me.username}</Box>|
           <Button
             ml={2}
-            onClick={
-              () => {
-                logout();
-                router.push(router.pathname);
-              }
-            }
+            onClick={() => {
+              logout();
+              router.push(router.pathname);
+            }}
             size="xs"
             isLoading={fetchingLogout}
           >
@@ -44,14 +50,16 @@ export const NavBar: React.FC<{}> = ({ }) => {
           </Button>
         </Flex>
       </>
-    )
+    );
   }
   return (
-    <Flex bg='lightsalmon' p={2}>
-      <Box ml={'auto'} >
-        {body}
-      </Box>
+    <Flex zIndex={1} bg="lightsalmon" p={2} align="center">
+      <Flex flex={1} align="center" m="auto" maxW={800}>
+        <Link href="/">
+          <Heading>Reddit-clone</Heading>
+        </Link>
+        <Box ml={"auto"}>{body}</Box>
+      </Flex>
     </Flex>
-
   );
 }

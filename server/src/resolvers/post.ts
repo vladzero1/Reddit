@@ -17,7 +17,6 @@ import { getConnection } from "typeorm";
 import { Post } from "../entities/Post";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
-import { User } from "../entities/User";
 
 @InputType()
 class PostInput {
@@ -58,7 +57,7 @@ export class PostResolver {
       where: { userId: userId, postId: postId },
     });
     const postData = await Post.findOne({ where: { id: postId } });
-    console.log(updootData)
+    console.log(updootData);
     if (updootData) {
       if (updootData.value !== realValue) {
         await getConnection().transaction(async () => {
@@ -82,7 +81,6 @@ export class PostResolver {
         });
       }
     } else if (!updootData) {
-
       await getConnection().transaction(async () => {
         await Updoot.insert({
           userId,
@@ -104,20 +102,22 @@ export class PostResolver {
   async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
-    @Ctx() {req}: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<PaginatedPosts> {
     const realLimit = Math.min(50, limit);
     const realLimitPlusOne = realLimit + 1;
 
     const replacement: any[] = [realLimitPlusOne];
-    if(req.session.userId){
-      replacement.push(req.session.userId)
+    if (req.session.userId) {
+      replacement.push(req.session.userId);
     }
-    let cursorIdx= 3;
+    let cursorIdx = 2;
+
     if (cursor) {
       replacement.push(new Date(parseInt(cursor)));
-      cursorIdx = replacement.length + 1;
+      cursorIdx = replacement.length;
     }
+
     const posts = await getConnection().query(
       `
       select p.*,
@@ -149,9 +149,7 @@ export class PostResolver {
 
   @Query(() => Post, { nullable: true })
   async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
-    const data = await Post.findOne(id);
-    const creator = await User.findOne(data?.creatorId);
-    data!.creator = creator!;
+    const data = await Post.findOne(id, { relations: ["creator"] });
     return data;
   }
 
@@ -170,21 +168,33 @@ export class PostResolver {
   @Mutation(() => Post, { nullable: true })
   async updatePost(
     @Arg("id", () => Int) id: number,
-    @Arg("input") input: PostInput
+    @Arg("input") input: PostInput, 
+    @Ctx() {req}: MyContext
   ): Promise<Post | undefined> {
     const post = await Post.findOne(id);
     if (!post) {
       return undefined;
     }
-    if (typeof input.title !== "undefined") {
-      Post.update({ id }, { title: input.title, content: input.content });
+    if (typeof input.title !== "undefined" && typeof input.content !== "undefined") {
+
+      const result = await getConnection()
+        .createQueryBuilder()
+        .update(Post)
+        .set({ title: input.title, content: input.content })
+        .where('id = :id and "creatorId" = :creatorId', { id, creatorId: req.session.userId })
+        .returning('*')
+        .execute();
+      return result.raw[0]
     }
-    return post;
+    return undefined;
   }
 
   @Mutation(() => Boolean)
-  async deletePost(@Arg("id", () => Int) id: number): Promise<Boolean> {
-    await Post.delete(id);
+  async deletePost(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
+  ): Promise<Boolean> {
+    await Post.delete({ id: id, creatorId: req.session.userId});
     return true;
   }
 }

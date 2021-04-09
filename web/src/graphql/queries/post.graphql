@@ -1,8 +1,5 @@
-query Post($limit: Int!, $cursor: String) {
-  posts(limit: $limit, cursor: $cursor) {
-    hasMore
-    posts {
-      ...PostSnippets
-    }
+query Post($id: Int!){
+  post(id: $id){
+    ...PostSnippets
   }
 }

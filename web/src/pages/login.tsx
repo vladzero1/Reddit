@@ -15,7 +15,7 @@ interface loginProps {}
 const Login: React.FC<loginProps> = ({}) => {
   const router = useRouter();
   const [, login] = useLoginMutation();
-  console.log(router);
+
   return (
     <Wrapper variant="regular">
       <Formik

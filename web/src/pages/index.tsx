@@ -1,26 +1,19 @@
+import { Box, Button, Flex, Heading, Stack, Text } from "@chakra-ui/react";
 import { withUrqlClient } from "next-urql";
 import Link from "next/link";
+import React, { useState } from "react";
+import { EditDeletePostButtons } from "../components/EditDeletePostButtons";
 import { Layout } from "../components/Layout";
-import { usePostQuery } from "../generated/graphql";
-import { createUrqlClient } from "../utils/createUrqlClient";
-import {
-  Stack,
-  Box,
-  Heading,
-  Text,
-  Flex,
-  Button,
-} from "@chakra-ui/react";
-import { useState } from "react";
 import { UpdootSection } from "../components/UpdootSection";
+import { usePostsQuery } from "../generated/graphql";
+import { createUrqlClient } from "../utils/createUrqlClient";
 
 const Index = () => {
   const [variables, setVariables] = useState({
     limit: 10,
     cursor: undefined as undefined | string,
   });
-
-  const [{ data, fetching }] = usePostQuery({
+  const [{ data, fetching }] = usePostsQuery({
     variables,
   });
   if (!data && !fetching) {
@@ -29,36 +22,37 @@ const Index = () => {
   return (
     <>
       <Layout variant="regular">
-        <Flex mb={4}>
-          <Heading>Reddit-clone</Heading>
-          <Box ml="auto">
-            <Link href="/create-post">Create Post</Link>
-          </Box>
-        </Flex>
-
         <Stack spacing="24px">
           {fetching && !data ? (
             <div>...loading</div>
           ) : (
-            data!.posts.posts.map((post) => (
-              <Box
-                p={5}
-                shadow="md"
-                borderWidth="1px"
-                flex="1"
-                borderRadius="md"
-                key={post.id}
-              >
-                <Flex>
-                  <UpdootSection post={post} />
-                  <Box>
-                    <Heading fontSize="xl">{post.title}</Heading>
-                    <Text>Posted by {post.creator.username}</Text>
-                    <Text mt={4}>{post.contentSnippets}</Text>
-                  </Box>
-                </Flex>
-              </Box>
-            ))
+            data!.posts.posts.map((post) =>
+              !post ? null : (
+                <Box
+                  p={5}
+                  shadow="md"
+                  borderWidth="1px"
+                  flex="1"
+                  borderRadius="md"
+                  key={post.id}
+                >
+                  <Flex>
+                    <UpdootSection post={post} />
+                    <Box>
+                      <Link href="/post/[id]" as={`/post/${post.id}`}>
+                        <Heading fontSize="xl">{post.title}</Heading>
+                      </Link>
+                      <Text>Posted by {post.creator.username}</Text>
+                      <Text mt={4}>{post.contentSnippets}</Text>
+                    </Box>
+                    <EditDeletePostButtons
+                      id={post.id}
+                      creatorId={post.creator.id}
+                    />
+                  </Flex>
+                </Box>
+              )
+            )
           )}
         </Stack>
         {data?.posts.hasMore ? (

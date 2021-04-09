@@ -5,17 +5,18 @@ import {
   Exchange,
   fetchExchange,
   gql,
-  stringifyVariables,
+  stringifyVariables
 } from "urql";
 import { pipe, tap } from "wonka";
 import {
+  DeletePostMutationVariables,
   LoginMutation,
   LogoutMutation,
   MeDocument,
   MeQuery,
   Post,
   RegisterMutation,
-  VoteMutationVariables,
+  VoteMutationVariables
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import { isServer } from "./isServer";
@@ -69,7 +70,7 @@ export const cursorPagination = (): Resolver => {
 export const createUrqlClient = (ssrexchange: any, ctx: any) => {
   let cookie =''
   if (isServer()) {
-    cookie=ctx.req.headers.cookie;
+    cookie = ctx?.req?.headers?.cookie;
   }
   
   return {
@@ -96,6 +97,10 @@ export const createUrqlClient = (ssrexchange: any, ctx: any) => {
         },
         updates: {
           Mutation: {
+            deletePost: (_results, args, cache, _info) => {
+              const {id} = args as DeletePostMutationVariables;
+              cache.invalidate({ __typename: "Post", id: id });
+            },
             vote: (_results, args, cache, _info) => {
               const { postId, value } = args as VoteMutationVariables;
               const fragment = gql`
