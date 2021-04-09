@@ -11,10 +11,11 @@ import session from 'express-session';
 import connectRedis from 'connect-redis';
 import { MyContext } from "./types";
 import cors from "cors";
-import {createConnection} from 'typeorm'
+import { createConnection } from "typeorm";
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import path from "path";
+import { Updoot } from "./entities/Updoot";
 
 const main = async () => {
   const conn = await createConnection({
@@ -24,7 +25,7 @@ const main = async () => {
     logging: true,
     synchronize: true,
     migrations: [path.join(__dirname,'./migrations/*')],
-    entities: [Post, User]
+    entities: [Post, User, Updoot]
   })
   await conn.runMigrations();
   const app = express();
@@ -71,6 +72,7 @@ const main = async () => {
     app,
     cors: false
   });
+
 
   app.listen(4000, () => {
     console.log(`server is running on localhost:4000`);

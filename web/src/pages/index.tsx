@@ -3,8 +3,16 @@ import Link from "next/link";
 import { Layout } from "../components/Layout";
 import { usePostQuery } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
-import { Stack, Box, Heading, Text, Flex, Button } from "@chakra-ui/react";
+import {
+  Stack,
+  Box,
+  Heading,
+  Text,
+  Flex,
+  Button,
+} from "@chakra-ui/react";
 import { useState } from "react";
+import { UpdootSection } from "../components/UpdootSection";
 
 const Index = () => {
   const [variables, setVariables] = useState({
@@ -41,8 +49,14 @@ const Index = () => {
                 borderRadius="md"
                 key={post.id}
               >
-                <Heading fontSize="xl">{post.title}</Heading>
-                <Text mt={4}>{post.contentSnippets}</Text>
+                <Flex>
+                  <UpdootSection post={post} />
+                  <Box>
+                    <Heading fontSize="xl">{post.title}</Heading>
+                    <Text>Posted by {post.creator.username}</Text>
+                    <Text mt={4}>{post.contentSnippets}</Text>
+                  </Box>
+                </Flex>
               </Box>
             ))
           )}
