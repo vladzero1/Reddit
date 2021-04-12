@@ -26,7 +26,6 @@ export const Post: React.FC<{}> = ({}) => {
       <Layout>
         <Box mb={4}>
           <Heading fontSize="xl">{data?.post?.title}</Heading>
-
           {data?.post?.content}
         </Box>
 

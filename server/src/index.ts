@@ -16,6 +16,8 @@ import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import path from "path";
 import { Updoot } from "./entities/Updoot";
+import { CreateUserLoader } from "./utils/createUserLoader";
+import { CreateUpdootLoader } from "./utils/createUpdootLoader";
 
 const main = async () => {
   const conn = await createConnection({
@@ -59,14 +61,16 @@ const main = async () => {
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [HelloResolver, PostResolver, UserResolver],
-      validate: false
+      validate: false,
     }),
     context: ({ req, res }): MyContext => ({
       req,
       res,
-      redis
-    })
-  })
+      redis,
+      userLoader: CreateUserLoader(),
+      updootLoader: CreateUpdootLoader(),
+    }),
+  });
 
   apolloServer.applyMiddleware({
     app,

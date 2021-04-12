@@ -39,9 +39,9 @@ export const NavBar: React.FC<{}> = ({ }) => {
           <Box mr={2}>{data.me.username}</Box>|
           <Button
             ml={2}
-            onClick={() => {
-              logout();
-              router.push(router.pathname);
+            onClick={async () => {
+              await logout();
+              router.reload();
             }}
             size="xs"
             isLoading={fetchingLogout}
@@ -53,7 +53,7 @@ export const NavBar: React.FC<{}> = ({ }) => {
     );
   }
   return (
-    <Flex zIndex={1} bg="lightsalmon" p={2} align="center">
+    <Flex zIndex={1} bg="burlywood" p={2} align="center">
       <Flex flex={1} align="center" m="auto" maxW={800}>
         <Link href="/">
           <Heading>Reddit-clone</Heading>

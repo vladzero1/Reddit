@@ -1,11 +1,11 @@
-import { cacheExchange, Resolver } from "@urql/exchange-graphcache";
+import { Cache, cacheExchange, Resolver } from "@urql/exchange-graphcache";
 import Router from "next/router";
 import {
   dedupExchange,
   Exchange,
   fetchExchange,
   gql,
-  stringifyVariables
+  stringifyVariables,
 } from "urql";
 import { pipe, tap } from "wonka";
 import {
@@ -16,7 +16,7 @@ import {
   MeQuery,
   Post,
   RegisterMutation,
-  VoteMutationVariables
+  VoteMutationVariables,
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import { isServer } from "./isServer";
@@ -67,12 +67,22 @@ export const cursorPagination = (): Resolver => {
   };
 };
 
+export const invalidateAllPost = (cache: Cache): void => {
+  const allFields = cache.inspectFields("Query");
+  const fieldInfos = allFields.filter(
+    (info: { fieldName: string }) => info.fieldName === "posts"
+  );
+  fieldInfos.forEach((fi: { arguments: any }) => {
+    cache.invalidate("Query", "posts", fi.arguments || undefined);
+  });
+};
+
 export const createUrqlClient = (ssrexchange: any, ctx: any) => {
-  let cookie =''
+  let cookie = "";
   if (isServer()) {
     cookie = ctx?.req?.headers?.cookie;
   }
-  
+
   return {
     url: "http://localhost:4000/graphql",
 
@@ -98,7 +108,7 @@ export const createUrqlClient = (ssrexchange: any, ctx: any) => {
         updates: {
           Mutation: {
             deletePost: (_results, args, cache, _info) => {
-              const {id} = args as DeletePostMutationVariables;
+              const { id } = args as DeletePostMutationVariables;
               cache.invalidate({ __typename: "Post", id: id });
             },
             vote: (_results, args, cache, _info) => {
@@ -133,13 +143,7 @@ export const createUrqlClient = (ssrexchange: any, ctx: any) => {
               }
             },
             createPost: (_results, _args, cache, _info) => {
-              const allFields = cache.inspectFields("Query");
-              const fieldInfos = allFields.filter(
-                (info) => info.fieldName === "posts"
-              );
-              fieldInfos.forEach((fi) => {
-                cache.invalidate("Query", "posts", fi.arguments || undefined);
-              });
+              invalidateAllPost(cache);
             },
             login: (results, _args, cache, _info) => {
               betterUpdateQuery<LoginMutation, MeQuery>(
@@ -156,6 +160,7 @@ export const createUrqlClient = (ssrexchange: any, ctx: any) => {
                   }
                 }
               );
+              invalidateAllPost(cache);
             },
             register: (results, _args, cache, _info) => {
               betterUpdateQuery<RegisterMutation, MeQuery>(
